@@ -13,15 +13,15 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
  * Single MQTT connection, multiple subscriptions against each query 
  * 
  */
-public class WoTClient implements MqttCallback {
-    static MqttAsyncClient sampleClient;
+public class WoTClient {
+        static MqttAsyncClient sampleClient;
 	static String WoTBroker;
 	static String clientId;
 	static MemoryPersistence persistence;
 	static int qos = 0;
 	
         static {	
-	    WoTBroker       = "tcp://0.0.0.0:1883";
+	    WoTBroker    = "tcp://0.0.0.0:1883";
 	    clientId     = "RestFullWebService";
 	    persistence = new MemoryPersistence();
 	    try {
@@ -44,34 +44,32 @@ public class WoTClient implements MqttCallback {
 	}
         
         public boolean handleSubscribe(String query){
-		MqttCallback callback = new CallbackHandler();		
 		try {
-			sampleClient.setCallback(callback);
 			sampleClient.subscribe("$SYS/SPARQL/"+query, qos);
 		} catch (MqttException e) {
 			e.printStackTrace();
 			return false;
-		}		
+		}
+                sampleClient.setCallback(new MqttCallback(){
+                    @Override
+                    public void connectionLost(Throwable cause) {
+
+                    }
+
+                    @Override
+                    public void messageArrived(String topic, MqttMessage message) throws Exception {
+                        String[] topics = topic.split("/");
+                        String q = topics[2];
+                        String res = message.toString();
+                        StoreMap.putResult(q, res);
+                    }
+
+                    @Override
+                    public void deliveryComplete(IMqttDeliveryToken token) {
+
+                    }
+                });
 		return true;
 	}
-        
-        @Override
-	public void connectionLost(Throwable cause) {
-		// TODO Auto-generated method stub
-		
-	}
 
-        @Override
-	public void messageArrived(String topic, MqttMessage message) throws Exception {
-            String[] topics = topic.split("/");
-            String q = topics[2];
-            String res = message.toString();
-            StoreMap.putResult(q, res);
-	}
-
-	@Override
-	public void deliveryComplete(IMqttDeliveryToken token) {
-		// TODO Auto-generated method stub
-		
-	}
 }
